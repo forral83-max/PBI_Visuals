@@ -1,0 +1,17 @@
+{
+		"version": "2.2.3.2-custom",
+		"author": {"name":"Microsoft","email":"pbicvsupport@microsoft.com"},
+		"resources": [
+			{
+				"resourceId": "rId0",
+				"sourceType": 5,
+				"file": "resources/ChicletSlicerWrapValue1756000000001.pbiviz.json"
+			}
+		],
+		"visual": {"name":"chicletSlicerWrapValue","displayName":"Chiclet Slicer (Wrap + Value) 2.2.3.2-custom","guid":"ChicletSlicerWrapValue1756000000001","visualClassName":"ChicletSlicer","version":"2.2.3.2-custom","description":"Modified fork of Microsoft's Chiclet Slicer: adds word-wrap for chiclet labels and displays the bound measure (Values field) as a configurable value label (color, size, position), similar to the modern built-in slicer.","supportUrl":"https://community.powerbi.com","gitHubUrl":"https://github.com/Microsoft/PowerBI-visuals-ChicletSlicer"},
+		"metadata": {
+			"pbivizjson": {
+				"resourceId": "rId0"
+			}
+		}
+	}
