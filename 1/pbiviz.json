@@ -1,0 +1,23 @@
+{
+  "visual": {
+    "name": "chicletSlicerWrapValue",
+    "displayName": "Chiclet Slicer (Wrap + Value) 2.2.3.4-custom",
+    "guid": "ChicletSlicerWrapValue1756000000001",
+    "visualClassName": "ChicletSlicer",
+    "version": "2.2.3.4-custom",
+    "description": "Modified Chiclet Slicer with wrapped labels, configurable measure labels, independent fonts and card spacing.",
+    "supportUrl": "https://community.powerbi.com",
+    "gitHubUrl": "https://github.com/Microsoft/PowerBI-visuals-ChicletSlicer"
+  },
+  "apiVersion": "5.7.0",
+  "author": {
+    "name": "Microsoft",
+    "email": "pbicvsupport@microsoft.com"
+  },
+  "assets": {
+    "icon": "assets/icon.png"
+  },
+  "externalJS": [],
+  "style": "style/chicletSlicer.less",
+  "capabilities": "capabilities.json"
+}
