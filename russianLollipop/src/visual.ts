@@ -1,0 +1,212 @@
+/*
+*  Power BI Visual CLI
+*
+*  Copyright (c) Microsoft Corporation
+*  All rights reserved.
+*  MIT License
+*
+*  Permission is hereby granted, free of charge, to any person obtaining a copy
+*  of this software and associated documentation files (the ""Software""), to deal
+*  in the Software without restriction, including without limitation the rights
+*  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+*  copies of the Software, and to permit persons to whom the Software is
+*  furnished to do so, subject to the following conditions:
+*
+*  The above copyright notice and this permission notice shall be included in
+*  all copies or substantial portions of the Software.
+*
+*  THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+*  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+*  THE SOFTWARE.
+*/
+"use strict";
+
+import powerbi from "powerbi-visuals-api";
+import { FormattingSettingsService } from "powerbi-visuals-utils-formattingmodel";
+import "./../style/visual.less";
+
+import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructorOptions;
+import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
+import IVisual = powerbi.extensibility.visual.IVisual;
+import ISelectionId = powerbi.visuals.ISelectionId;
+import ISelectionManager = powerbi.extensibility.ISelectionManager;
+import DataView = powerbi.DataView;
+
+import { VisualFormattingSettingsModel } from "./settings";
+
+export class Visual implements IVisual {
+    private target: HTMLElement;
+    private svg: SVGSVGElement;
+    private formattingSettings: VisualFormattingSettingsModel;
+    private formattingSettingsService: FormattingSettingsService;
+    private selectionManager: ISelectionManager;
+    private host: powerbi.extensibility.visual.IVisualHost;
+
+    constructor(options: VisualConstructorOptions) {
+        this.formattingSettingsService = new FormattingSettingsService();
+        this.target = options.element;
+        this.host = options.host;
+        this.selectionManager = options.host.createSelectionManager();
+        this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        this.svg.classList.add("lollipop-visual");
+        this.target.appendChild(this.svg);
+    }
+
+    public update(options: VisualUpdateOptions) {
+        const dataView: DataView | undefined = options.dataViews && options.dataViews[0];
+        this.formattingSettings = this.formattingSettingsService.populateFormattingSettingsModel(
+            VisualFormattingSettingsModel,
+            dataView
+        );
+        this.render(dataView, options.viewport.width, options.viewport.height);
+    }
+
+    private render(dataView: DataView | undefined, width: number, height: number): void {
+        while (this.svg.firstChild) {
+            this.svg.removeChild(this.svg.firstChild);
+        }
+        this.svg.setAttribute("width", String(width));
+        this.svg.setAttribute("height", String(height));
+        this.svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+
+        const categories = dataView?.categorical?.categories?.[0];
+        const values = dataView?.categorical?.values?.[0];
+        if (!categories || !values || width < 20 || height < 20) {
+            return;
+        }
+
+        const points = categories.values.map((category, index) => ({
+            category: String(category ?? ""),
+            value: Number(values.values[index]),
+            selectionId: this.createSelectionId(categories, index)
+        })).filter((point) => Number.isFinite(point.value));
+        if (!points.length) {
+            return;
+        }
+
+        const settings = this.formattingSettings.lollipopCard;
+        const horizontal = settings.orientation.value.value === "horizontal";
+        const labelFontSize = this.clamp(Number(settings.fontSize.value), 8, 24);
+        const lineWidth = this.clamp(Number(settings.lineWidth.value), 1, 12);
+        const dotRadius = this.clamp(Number(settings.dotRadius.value), 3, 24);
+        const margin = horizontal
+            ? { top: 12, right: 64, bottom: 12, left: Math.min(width * 0.42, 180) }
+            : { top: 28, right: 16, bottom: Math.min(height * 0.34, 100), left: 42 };
+        const chartWidth = Math.max(1, width - margin.left - margin.right);
+        const chartHeight = Math.max(1, height - margin.top - margin.bottom);
+        const minimum = Math.min(0, ...points.map((point) => point.value));
+        const maximum = Math.max(0, ...points.map((point) => point.value));
+        const range = maximum - minimum || 1;
+        const valuePosition = (value: number): number => (value - minimum) / range;
+        const baseline = horizontal
+            ? margin.left + chartWidth * valuePosition(0)
+            : margin.top + chartHeight - chartHeight * valuePosition(0);
+
+        this.appendLine(horizontal ? baseline : margin.left, horizontal ? margin.top : baseline,
+            horizontal ? baseline : margin.left + chartWidth, horizontal ? margin.top + chartHeight : baseline);
+
+        points.forEach((point, index) => {
+            const slot = (index + 0.5) / points.length;
+            const axisPosition = horizontal
+                ? margin.top + chartHeight * slot
+                : margin.left + chartWidth * slot;
+            const endpoint = horizontal
+                ? { x: margin.left + chartWidth * valuePosition(point.value), y: axisPosition }
+                : { x: axisPosition, y: margin.top + chartHeight - chartHeight * valuePosition(point.value) };
+            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            group.style.cursor = "pointer";
+            group.appendChild(this.createSvgLine(
+                horizontal ? baseline : axisPosition,
+                horizontal ? axisPosition : baseline,
+                endpoint.x,
+                endpoint.y,
+                settings.lineColor.value.value,
+                lineWidth
+            ));
+            const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            dot.setAttribute("cx", String(endpoint.x));
+            dot.setAttribute("cy", String(endpoint.y));
+            dot.setAttribute("r", String(dotRadius));
+            dot.setAttribute("fill", settings.dotColor.value.value);
+            group.appendChild(dot);
+            group.appendChild(this.createText(
+                horizontal ? margin.left - 8 : endpoint.x,
+                horizontal ? endpoint.y + labelFontSize * 0.35 : height - margin.bottom + labelFontSize + 6,
+                point.category,
+                settings.labelColor.value.value,
+                labelFontSize,
+                horizontal ? "end" : "middle",
+                "category-label"
+            ));
+            if (settings.showLabels.value) {
+                group.appendChild(this.createText(
+                    horizontal ? endpoint.x + (point.value >= 0 ? dotRadius + 5 : -dotRadius - 5) : endpoint.x,
+                    horizontal ? endpoint.y + labelFontSize * 0.35 : endpoint.y - dotRadius - 5,
+                    this.formatValue(point.value),
+                    settings.labelColor.value.value,
+                    labelFontSize,
+                    horizontal ? (point.value >= 0 ? "start" : "end") : "middle",
+                    "value-label"
+                ));
+            }
+            group.addEventListener("click", (event) => {
+                this.selectionManager.select(point.selectionId, (event as MouseEvent).ctrlKey);
+            });
+            group.addEventListener("mouseenter", () => dot.setAttribute("r", String(dotRadius + 2)));
+            group.addEventListener("mouseleave", () => dot.setAttribute("r", String(dotRadius)));
+            this.svg.appendChild(group);
+        });
+    }
+
+    private createSelectionId(categories: powerbi.DataViewCategoryColumn, index: number): ISelectionId {
+        return this.host.createSelectionIdBuilder().withCategory(categories, index).createSelectionId();
+    }
+
+    private appendLine(x1: number, y1: number, x2: number, y2: number): void {
+        this.svg.appendChild(this.createSvgLine(x1, y1, x2, y2, "#D8DEEA", 1));
+    }
+
+    private createSvgLine(x1: number, y1: number, x2: number, y2: number, color: string, width: number): SVGLineElement {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", String(x1));
+        line.setAttribute("y1", String(y1));
+        line.setAttribute("x2", String(x2));
+        line.setAttribute("y2", String(y2));
+        line.setAttribute("stroke", color);
+        line.setAttribute("stroke-width", String(width));
+        line.setAttribute("stroke-linecap", "round");
+        return line;
+    }
+
+    private createText(x: number, y: number, text: string, color: string, size: number, anchor: string, className: string): SVGTextElement {
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.setAttribute("x", String(x));
+        label.setAttribute("y", String(y));
+        label.setAttribute("fill", color);
+        label.setAttribute("font-size", String(size));
+        label.setAttribute("text-anchor", anchor);
+        label.setAttribute("class", className);
+        label.textContent = text;
+        return label;
+    }
+
+    private formatValue(value: number): string {
+        return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(value);
+    }
+
+    private clamp(value: number, minimum: number, maximum: number): number {
+        return Number.isFinite(value) ? Math.min(maximum, Math.max(minimum, value)) : minimum;
+    }
+
+    /**
+     * Returns properties pane formatting model content hierarchies, properties and latest formatting values, Then populate properties pane.
+     * This method is called once every time we open properties pane or when the user edit any format property. 
+     */
+    public getFormattingModel(): powerbi.visuals.FormattingModel {
+        return this.formattingSettingsService.buildFormattingModel(this.formattingSettings);
+    }
+}

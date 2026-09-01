@@ -1,0 +1,17 @@
+{
+		"version": "1.0.0.0",
+		"author": {"name":"forral83-max","email":"forral83-max@users.noreply.github.com"},
+		"resources": [
+			{
+				"resourceId": "rId0",
+				"sourceType": 5,
+				"file": "resources/russianLollipopA2F3378191B94C09BF2B4541498F7376.pbiviz.json"
+			}
+		],
+		"visual": {"name":"russianLollipop","displayName":"Леденцовая диаграмма","guid":"russianLollipopA2F3378191B94C09BF2B4541498F7376","visualClassName":"Visual","version":"1.0.0.0","description":"Леденцовая диаграмма для сравнения категорий","supportUrl":"https://github.com/forral83-max/PBI_Visuals","gitHubUrl":"https://github.com/forral83-max/PBI_Visuals"},
+		"metadata": {
+			"pbivizjson": {
+				"resourceId": "rId0"
+			}
+		}
+	}
