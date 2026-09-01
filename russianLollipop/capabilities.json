@@ -6,13 +6,8 @@
             "kind": "Grouping"
         },
         {
-            "displayName": "План",
-            "name": "plan",
-            "kind": "Measure"
-        },
-        {
-            "displayName": "Факт",
-            "name": "fact",
+            "displayName": "Значения (План / Факт)",
+            "name": "values",
             "kind": "Measure"
         }
     ],
@@ -115,12 +110,7 @@
                     "select": [
                         {
                             "bind": {
-                                "to": "plan"
-                            }
-                        },
-                        {
-                            "bind": {
-                                "to": "fact"
+                                "to": "values"
                             }
                         }
                     ]
