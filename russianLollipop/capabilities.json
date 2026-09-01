@@ -6,8 +6,13 @@
             "kind": "Grouping"
         },
         {
-            "displayName": "Значение",
-            "name": "measure",
+            "displayName": "План",
+            "name": "plan",
+            "kind": "Measure"
+        },
+        {
+            "displayName": "Факт",
+            "name": "fact",
             "kind": "Measure"
         }
     ],
@@ -97,12 +102,6 @@
     },
     "dataViewMappings": [
         {
-            "conditions": [
-                {
-                    "category": { "min": 1, "max": 1 },
-                    "measure": { "min": 1, "max": 2 }
-                }
-            ],
             "categorical": {
                 "categories": {
                     "for": {
@@ -116,7 +115,12 @@
                     "select": [
                         {
                             "bind": {
-                                "to": "measure"
+                                "to": "plan"
+                            }
+                        },
+                        {
+                            "bind": {
+                                "to": "fact"
                             }
                         }
                     ]
