@@ -74,91 +74,109 @@ export class Visual implements IVisual {
         this.svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
 
         const categories = dataView?.categorical?.categories?.[0];
-        const values = dataView?.categorical?.values?.[0];
-        if (!categories || !values || width < 20 || height < 20) {
+        const valueColumns = dataView?.categorical?.values;
+        if (!categories || !valueColumns?.length || width < 20 || height < 20) {
             return;
         }
 
         const points = categories.values.map((category, index) => ({
             category: String(category ?? ""),
-            value: Number(values.values[index]),
+            values: valueColumns.slice(0, 2).map((column) => Number(column.values[index])),
             selectionId: this.createSelectionId(categories, index)
-        })).filter((point) => Number.isFinite(point.value));
+        })).filter((point) => point.values.some((value) => Number.isFinite(value)));
         if (!points.length) {
             return;
         }
 
         const settings = this.formattingSettings.lollipopCard;
+        const gridSettings = this.formattingSettings.gridCard;
+        const axisSettings = this.formattingSettings.axesCard;
         const horizontal = settings.orientation.value.value === "horizontal";
         const labelFontSize = this.clamp(Number(settings.fontSize.value), 8, 24);
         const lineWidth = this.clamp(Number(settings.lineWidth.value), 1, 12);
         const dotRadius = this.clamp(Number(settings.dotRadius.value), 3, 24);
+        const outlineWidth = this.clamp(Number(settings.markerOutlineWidth.value), 0, 8);
+        const axisFontSize = this.clamp(Number(axisSettings.axisFontSize.value), 8, 20);
         const margin = horizontal
             ? { top: 12, right: 64, bottom: 12, left: Math.min(width * 0.42, 180) }
             : { top: 28, right: 16, bottom: Math.min(height * 0.34, 100), left: 42 };
         const chartWidth = Math.max(1, width - margin.left - margin.right);
         const chartHeight = Math.max(1, height - margin.top - margin.bottom);
-        const minimum = Math.min(0, ...points.map((point) => point.value));
-        const maximum = Math.max(0, ...points.map((point) => point.value));
+        const allValues = points.flatMap((point) => point.values).filter((value) => Number.isFinite(value));
+        const minimum = Math.min(0, ...allValues);
+        const maximum = Math.max(0, ...allValues);
         const range = maximum - minimum || 1;
         const valuePosition = (value: number): number => (value - minimum) / range;
         const baseline = horizontal
             ? margin.left + chartWidth * valuePosition(0)
             : margin.top + chartHeight - chartHeight * valuePosition(0);
 
-        this.appendLine(horizontal ? baseline : margin.left, horizontal ? margin.top : baseline,
-            horizontal ? baseline : margin.left + chartWidth, horizontal ? margin.top + chartHeight : baseline);
+        if (gridSettings.showGrid.value) {
+            this.drawGrid(horizontal, margin, chartWidth, chartHeight, minimum, maximum,
+                gridSettings.gridColor.value.value, this.clamp(Number(gridSettings.gridWidth.value), 1, 5),
+                axisSettings.axisTextColor.value.value, axisFontSize);
+        }
+        if (axisSettings.showAxis.value) {
+            this.appendLine(horizontal ? baseline : margin.left, horizontal ? margin.top : baseline,
+                horizontal ? baseline : margin.left + chartWidth, horizontal ? margin.top + chartHeight : baseline,
+                axisSettings.axisColor.value.value, 1);
+        }
 
         points.forEach((point, index) => {
             const slot = (index + 0.5) / points.length;
             const axisPosition = horizontal
                 ? margin.top + chartHeight * slot
                 : margin.left + chartWidth * slot;
-            const endpoint = horizontal
-                ? { x: margin.left + chartWidth * valuePosition(point.value), y: axisPosition }
-                : { x: axisPosition, y: margin.top + chartHeight - chartHeight * valuePosition(point.value) };
-            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-            group.style.cursor = "pointer";
-            group.appendChild(this.createSvgLine(
-                horizontal ? baseline : axisPosition,
-                horizontal ? axisPosition : baseline,
-                endpoint.x,
-                endpoint.y,
-                settings.lineColor.value.value,
-                lineWidth
-            ));
-            const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            dot.setAttribute("cx", String(endpoint.x));
-            dot.setAttribute("cy", String(endpoint.y));
-            dot.setAttribute("r", String(dotRadius));
-            dot.setAttribute("fill", settings.dotColor.value.value);
-            group.appendChild(dot);
-            group.appendChild(this.createText(
-                horizontal ? margin.left - 8 : endpoint.x,
-                horizontal ? endpoint.y + labelFontSize * 0.35 : height - margin.bottom + labelFontSize + 6,
+            const categoryOffset = point.values.length > 1 ? (index % 2 === 0 ? -dotRadius : dotRadius) : 0;
+            point.values.forEach((value, valueIndex) => {
+                if (!Number.isFinite(value)) {
+                    return;
+                }
+                const offset = point.values.length > 1 ? (valueIndex === 0 ? -dotRadius : dotRadius) : categoryOffset;
+                const endpoint = horizontal
+                    ? { x: margin.left + chartWidth * valuePosition(value), y: axisPosition + offset }
+                    : { x: axisPosition + offset, y: margin.top + chartHeight - chartHeight * valuePosition(value) };
+                const color = valueIndex === 0 ? settings.planColor.value.value : settings.factColor.value.value;
+                const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                group.style.cursor = "pointer";
+                group.appendChild(this.createSvgLine(
+                    horizontal ? baseline : endpoint.x,
+                    horizontal ? endpoint.y : baseline,
+                    endpoint.x,
+                    endpoint.y,
+                    color,
+                    lineWidth
+                ));
+                const marker = this.createMarker(endpoint.x, endpoint.y, dotRadius, color,
+                    settings.markerOutlineColor.value.value, outlineWidth, String(settings.markerShape.value.value));
+                group.appendChild(marker);
+                if (settings.showLabels.value) {
+                    group.appendChild(this.createText(
+                        horizontal ? endpoint.x + (value >= 0 ? dotRadius + 5 : -dotRadius - 5) : endpoint.x,
+                        horizontal ? endpoint.y + labelFontSize * 0.35 : endpoint.y - dotRadius - 5,
+                        this.formatValue(value),
+                        settings.labelColor.value.value,
+                        labelFontSize,
+                        horizontal ? (value >= 0 ? "start" : "end") : "middle",
+                        "value-label"
+                    ));
+                }
+                group.addEventListener("click", (event) => {
+                    this.selectionManager.select(point.selectionId, (event as MouseEvent).ctrlKey);
+                });
+                group.addEventListener("mouseenter", () => marker.setAttribute("opacity", "0.75"));
+                group.addEventListener("mouseleave", () => marker.setAttribute("opacity", "1"));
+                this.svg.appendChild(group);
+            });
+            this.svg.appendChild(this.createText(
+                horizontal ? margin.left - 8 : axisPosition,
+                horizontal ? axisPosition + labelFontSize * 0.35 : height - margin.bottom + labelFontSize + 6,
                 point.category,
                 settings.labelColor.value.value,
                 labelFontSize,
                 horizontal ? "end" : "middle",
                 "category-label"
             ));
-            if (settings.showLabels.value) {
-                group.appendChild(this.createText(
-                    horizontal ? endpoint.x + (point.value >= 0 ? dotRadius + 5 : -dotRadius - 5) : endpoint.x,
-                    horizontal ? endpoint.y + labelFontSize * 0.35 : endpoint.y - dotRadius - 5,
-                    this.formatValue(point.value),
-                    settings.labelColor.value.value,
-                    labelFontSize,
-                    horizontal ? (point.value >= 0 ? "start" : "end") : "middle",
-                    "value-label"
-                ));
-            }
-            group.addEventListener("click", (event) => {
-                this.selectionManager.select(point.selectionId, (event as MouseEvent).ctrlKey);
-            });
-            group.addEventListener("mouseenter", () => dot.setAttribute("r", String(dotRadius + 2)));
-            group.addEventListener("mouseleave", () => dot.setAttribute("r", String(dotRadius)));
-            this.svg.appendChild(group);
         });
     }
 
@@ -166,8 +184,53 @@ export class Visual implements IVisual {
         return this.host.createSelectionIdBuilder().withCategory(categories, index).createSelectionId();
     }
 
-    private appendLine(x1: number, y1: number, x2: number, y2: number): void {
-        this.svg.appendChild(this.createSvgLine(x1, y1, x2, y2, "#D8DEEA", 1));
+    private appendLine(x1: number, y1: number, x2: number, y2: number, color: string, width: number): void {
+        this.svg.appendChild(this.createSvgLine(x1, y1, x2, y2, color, width));
+    }
+
+    private drawGrid(horizontal: boolean, margin: { top: number; right: number; bottom: number; left: number },
+        chartWidth: number, chartHeight: number, minimum: number, maximum: number, color: string,
+        width: number, textColor: string, fontSize: number): void {
+        const tickCount = 5;
+        const range = maximum - minimum || 1;
+        for (let tickIndex = 0; tickIndex <= tickCount; tickIndex++) {
+            const value = minimum + range * tickIndex / tickCount;
+            const ratio = tickIndex / tickCount;
+            if (horizontal) {
+                const x = margin.left + chartWidth * ratio;
+                this.appendLine(x, margin.top, x, margin.top + chartHeight, color, width);
+                this.svg.appendChild(this.createText(x, margin.top + chartHeight + fontSize + 4,
+                    this.formatValue(value), textColor, fontSize, "middle", "axis-label"));
+            } else {
+                const y = margin.top + chartHeight - chartHeight * ratio;
+                this.appendLine(margin.left, y, margin.left + chartWidth, y, color, width);
+                this.svg.appendChild(this.createText(margin.left - 8, y + fontSize * 0.35,
+                    this.formatValue(value), textColor, fontSize, "end", "axis-label"));
+            }
+        }
+    }
+
+    private createMarker(x: number, y: number, radius: number, color: string, outlineColor: string,
+        outlineWidth: number, shape: string): SVGElement {
+        const marker = document.createElementNS("http://www.w3.org/2000/svg", shape === "circle" ? "circle" : "rect");
+        if (shape === "circle") {
+            marker.setAttribute("cx", String(x));
+            marker.setAttribute("cy", String(y));
+            marker.setAttribute("r", String(radius));
+        } else {
+            const size = shape === "diamond" ? radius * 1.5 : radius * 2;
+            marker.setAttribute("x", String(x - size / 2));
+            marker.setAttribute("y", String(y - size / 2));
+            marker.setAttribute("width", String(size));
+            marker.setAttribute("height", String(size));
+            if (shape === "diamond") {
+                marker.setAttribute("transform", `rotate(45 ${x} ${y})`);
+            }
+        }
+        marker.setAttribute("fill", color);
+        marker.setAttribute("stroke", outlineColor);
+        marker.setAttribute("stroke-width", String(outlineWidth));
+        return marker;
     }
 
     private createSvgLine(x1: number, y1: number, x2: number, y2: number, color: string, width: number): SVGLineElement {

@@ -33,15 +33,15 @@ import FormattingSettingsSlice = formattingSettings.Slice;
 import FormattingSettingsModel = formattingSettings.Model;
 
 class LollipopCardSettings extends FormattingSettingsCard {
-    lineColor = new formattingSettings.ColorPicker({
-        name: "lineColor",
-        displayName: "Цвет линии",
+    planColor = new formattingSettings.ColorPicker({
+        name: "planColor",
+        displayName: "Цвет плана",
         value: { value: "#2F6BFF" }
     });
 
-    dotColor = new formattingSettings.ColorPicker({
-        name: "dotColor",
-        displayName: "Цвет точки",
+    factColor = new formattingSettings.ColorPicker({
+        name: "factColor",
+        displayName: "Цвет факта",
         value: { value: "#FF5C7A" }
     });
 
@@ -59,6 +59,29 @@ class LollipopCardSettings extends FormattingSettingsCard {
             { value: "horizontal", displayName: "Горизонтальная" },
             { value: "vertical", displayName: "Вертикальная" }
         ]
+    });
+
+    markerShape = new formattingSettings.ItemDropdown({
+        name: "markerShape",
+        displayName: "Форма маркера",
+        value: { value: "circle", displayName: "Круг" },
+        items: [
+            { value: "circle", displayName: "Круг" },
+            { value: "square", displayName: "Квадрат" },
+            { value: "diamond", displayName: "Ромб" }
+        ]
+    });
+
+    markerOutlineColor = new formattingSettings.ColorPicker({
+        name: "markerOutlineColor",
+        displayName: "Обводка маркера",
+        value: { value: "#FFFFFF" }
+    });
+
+    markerOutlineWidth = new formattingSettings.NumUpDown({
+        name: "markerOutlineWidth",
+        displayName: "Толщина обводки",
+        value: 2
     });
 
     showLabels = new formattingSettings.ToggleSwitch({
@@ -89,14 +112,71 @@ class LollipopCardSettings extends FormattingSettingsCard {
     displayName = "Настройки графика";
     slices: Array<FormattingSettingsSlice> = [
         this.orientation,
-        this.lineColor,
-        this.dotColor,
+        this.planColor,
+        this.factColor,
         this.labelColor,
         this.showLabels,
         this.lineWidth,
+        this.fontSize,
+        this.markerShape,
         this.dotRadius,
-        this.fontSize
+        this.markerOutlineColor,
+        this.markerOutlineWidth
     ];
+}
+
+class GridCardSettings extends FormattingSettingsCard {
+    showGrid = new formattingSettings.ToggleSwitch({
+        name: "showGrid",
+        displayName: "Показывать сетку",
+        value: true
+    });
+
+    gridColor = new formattingSettings.ColorPicker({
+        name: "gridColor",
+        displayName: "Цвет сетки",
+        value: { value: "#D8DEEA" }
+    });
+
+    gridWidth = new formattingSettings.NumUpDown({
+        name: "gridWidth",
+        displayName: "Толщина сетки",
+        value: 1
+    });
+
+    name = "grid";
+    displayName = "Сетка";
+    slices: Array<FormattingSettingsSlice> = [this.showGrid, this.gridColor, this.gridWidth];
+}
+
+class AxesCardSettings extends FormattingSettingsCard {
+    showAxis = new formattingSettings.ToggleSwitch({
+        name: "showAxis",
+        displayName: "Показывать оси",
+        value: true
+    });
+
+    axisColor = new formattingSettings.ColorPicker({
+        name: "axisColor",
+        displayName: "Цвет осей",
+        value: { value: "#8792A8" }
+    });
+
+    axisTextColor = new formattingSettings.ColorPicker({
+        name: "axisTextColor",
+        displayName: "Цвет подписей осей",
+        value: { value: "#5E6A80" }
+    });
+
+    axisFontSize = new formattingSettings.NumUpDown({
+        name: "axisFontSize",
+        displayName: "Размер подписей осей",
+        value: 11
+    });
+
+    name = "axes";
+    displayName = "Оси";
+    slices: Array<FormattingSettingsSlice> = [this.showAxis, this.axisColor, this.axisTextColor, this.axisFontSize];
 }
 
 /**
@@ -105,6 +185,8 @@ class LollipopCardSettings extends FormattingSettingsCard {
 */
 export class VisualFormattingSettingsModel extends FormattingSettingsModel {
     lollipopCard = new LollipopCardSettings();
+    gridCard = new GridCardSettings();
+    axesCard = new AxesCardSettings();
 
-    cards = [this.lollipopCard];
+    cards = [this.lollipopCard, this.gridCard, this.axesCard];
 }

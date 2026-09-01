@@ -14,7 +14,7 @@
     "objects": {
         "lollipop": {
             "properties": {
-            "lineColor": {
+                "planColor": {
                     "type": {
                         "fill": {
                             "solid": {
@@ -23,7 +23,7 @@
                         }
                     }
                 },
-                "dotColor": {
+                "factColor": {
                     "type": {
                         "fill": {
                             "solid": {
@@ -34,7 +34,11 @@
                 },
                 "labelColor": {
                     "type": {
-                        "bool": true
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
                     }
                 },
                 "orientation": {
@@ -42,6 +46,9 @@
                 },
                 "showLabels": {
                     "type": { "bool": true }
+                },
+                "markerShape": {
+                    "type": { "text": true }
                 },
                 "lineWidth": {
                     "type": { "numeric": true }
@@ -51,12 +58,51 @@
                 },
                 "fontSize": {
                     "type": { "numeric": true }
+                },
+                "markerOutlineColor": {
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    }
+                },
+                "markerOutlineWidth": {
+                    "type": { "numeric": true }
                 }
+            }
+        },
+        "grid": {
+            "properties": {
+                "showGrid": { "type": { "bool": true } },
+                "gridColor": {
+                    "type": { "fill": { "solid": { "color": true } } }
+                },
+                "gridWidth": { "type": { "numeric": true } }
+            }
+        },
+        "axes": {
+            "properties": {
+                "showAxis": { "type": { "bool": true } },
+                "axisColor": {
+                    "type": { "fill": { "solid": { "color": true } } }
+                },
+                "axisTextColor": {
+                    "type": { "fill": { "solid": { "color": true } } }
+                },
+                "axisFontSize": { "type": { "numeric": true } }
             }
         }
     },
     "dataViewMappings": [
         {
+            "conditions": [
+                {
+                    "category": { "min": 1, "max": 1 },
+                    "measure": { "min": 1, "max": 2 }
+                }
+            ],
             "categorical": {
                 "categories": {
                     "for": {
