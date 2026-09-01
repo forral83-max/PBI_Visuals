@@ -127,26 +127,29 @@ export class Visual implements IVisual {
             const axisPosition = horizontal
                 ? margin.top + chartHeight * slot
                 : margin.left + chartWidth * slot;
-            const categoryOffset = point.values.length > 1 ? (index % 2 === 0 ? -dotRadius : dotRadius) : 0;
+            const validValues = point.values.filter((value) => Number.isFinite(value));
+            const stemValue = Math.max(0, ...validValues);
+            const stemEndpoint = horizontal
+                ? { x: margin.left + chartWidth * valuePosition(stemValue), y: axisPosition }
+                : { x: axisPosition, y: margin.top + chartHeight - chartHeight * valuePosition(stemValue) };
+            this.svg.appendChild(this.createSvgLine(
+                horizontal ? baseline : axisPosition,
+                horizontal ? axisPosition : baseline,
+                stemEndpoint.x,
+                stemEndpoint.y,
+                settings.planColor.value.value,
+                lineWidth
+            ));
             point.values.forEach((value, valueIndex) => {
                 if (!Number.isFinite(value)) {
                     return;
                 }
-                const offset = point.values.length > 1 ? (valueIndex === 0 ? -dotRadius : dotRadius) : categoryOffset;
                 const endpoint = horizontal
-                    ? { x: margin.left + chartWidth * valuePosition(value), y: axisPosition + offset }
-                    : { x: axisPosition + offset, y: margin.top + chartHeight - chartHeight * valuePosition(value) };
+                    ? { x: margin.left + chartWidth * valuePosition(value), y: axisPosition }
+                    : { x: axisPosition, y: margin.top + chartHeight - chartHeight * valuePosition(value) };
                 const color = valueIndex === 0 ? settings.planColor.value.value : settings.factColor.value.value;
                 const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
                 group.style.cursor = "pointer";
-                group.appendChild(this.createSvgLine(
-                    horizontal ? baseline : endpoint.x,
-                    horizontal ? endpoint.y : baseline,
-                    endpoint.x,
-                    endpoint.y,
-                    color,
-                    lineWidth
-                ));
                 const marker = this.createMarker(endpoint.x, endpoint.y, dotRadius, color,
                     settings.markerOutlineColor.value.value, outlineWidth, String(settings.markerShape.value.value));
                 group.appendChild(marker);
