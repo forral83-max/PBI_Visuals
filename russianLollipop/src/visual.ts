@@ -137,7 +137,7 @@ export class Visual implements IVisual {
                 horizontal ? axisPosition : baseline,
                 stemEndpoint.x,
                 stemEndpoint.y,
-                settings.planColor.value.value,
+                settings.stemColor.value.value,
                 lineWidth
             ));
             point.values.forEach((value, valueIndex) => {
@@ -154,13 +154,23 @@ export class Visual implements IVisual {
                     settings.markerOutlineColor.value.value, outlineWidth, String(settings.markerShape.value.value));
                 group.appendChild(marker);
                 if (settings.showLabels.value) {
+                    const labelPosition = String(settings.labelPosition.value.value);
+                    const labelCoordinates = this.getLabelCoordinates(
+                        endpoint.x,
+                        endpoint.y,
+                        value,
+                        dotRadius,
+                        labelFontSize,
+                        labelPosition,
+                        horizontal
+                    );
                     group.appendChild(this.createText(
-                        horizontal ? endpoint.x + (value >= 0 ? dotRadius + 5 : -dotRadius - 5) : endpoint.x,
-                        horizontal ? endpoint.y + labelFontSize * 0.35 : endpoint.y - dotRadius - 5,
+                        labelCoordinates.x,
+                        labelCoordinates.y,
                         this.formatValue(value),
                         settings.labelColor.value.value,
                         labelFontSize,
-                        horizontal ? (value >= 0 ? "start" : "end") : "middle",
+                        labelCoordinates.anchor,
                         "value-label"
                     ));
                 }
@@ -234,6 +244,24 @@ export class Visual implements IVisual {
         marker.setAttribute("stroke", outlineColor);
         marker.setAttribute("stroke-width", String(outlineWidth));
         return marker;
+    }
+
+    private getLabelCoordinates(x: number, y: number, value: number, radius: number,
+        fontSize: number, position: string, horizontal: boolean): { x: number; y: number; anchor: string } {
+        if (position === "top") {
+            return { x, y: y - radius - 6, anchor: "middle" };
+        }
+        if (position === "bottom") {
+            return { x, y: y + radius + fontSize + 2, anchor: "middle" };
+        }
+        if (horizontal) {
+            return {
+                x: x + (value >= 0 ? radius + 5 : -radius - 5),
+                y: y + fontSize * 0.35,
+                anchor: value >= 0 ? "start" : "end"
+            };
+        }
+        return { x: x + radius + 5, y: y + fontSize * 0.35, anchor: "start" };
     }
 
     private createSvgLine(x1: number, y1: number, x2: number, y2: number, color: string, width: number): SVGLineElement {

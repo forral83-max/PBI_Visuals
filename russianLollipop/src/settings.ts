@@ -33,6 +33,12 @@ import FormattingSettingsSlice = formattingSettings.Slice;
 import FormattingSettingsModel = formattingSettings.Model;
 
 class LollipopCardSettings extends FormattingSettingsCard {
+    stemColor = new formattingSettings.ColorPicker({
+        name: "stemColor",
+        displayName: "Цвет линии",
+        value: { value: "#2F6BFF" }
+    });
+
     planColor = new formattingSettings.ColorPicker({
         name: "planColor",
         displayName: "Цвет плана",
@@ -90,6 +96,17 @@ class LollipopCardSettings extends FormattingSettingsCard {
         value: true
     });
 
+    labelPosition = new formattingSettings.ItemDropdown({
+        name: "labelPosition",
+        displayName: "Положение подписи",
+        value: { value: "side", displayName: "Сбоку" },
+        items: [
+            { value: "side", displayName: "Сбоку" },
+            { value: "top", displayName: "Сверху" },
+            { value: "bottom", displayName: "Снизу" }
+        ]
+    });
+
     lineWidth = new formattingSettings.NumUpDown({
         name: "lineWidth",
         displayName: "Толщина линии",
@@ -112,10 +129,12 @@ class LollipopCardSettings extends FormattingSettingsCard {
     displayName = "Настройки графика";
     slices: Array<FormattingSettingsSlice> = [
         this.orientation,
+        this.stemColor,
         this.planColor,
         this.factColor,
         this.labelColor,
         this.showLabels,
+        this.labelPosition,
         this.lineWidth,
         this.fontSize,
         this.markerShape,

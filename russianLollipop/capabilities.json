@@ -14,6 +14,15 @@
     "objects": {
         "lollipop": {
             "properties": {
+                "stemColor": {
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    }
+                },
                 "planColor": {
                     "type": {
                         "fill": {
@@ -46,6 +55,9 @@
                 },
                 "showLabels": {
                     "type": { "bool": true }
+                },
+                "labelPosition": {
+                    "type": { "text": true }
                 },
                 "markerShape": {
                     "type": { "text": true }
