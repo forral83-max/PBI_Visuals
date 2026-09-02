@@ -150,16 +150,38 @@ export class Visual implements IVisual {
                 settings.stemColor.value.value,
                 lineWidth
             ));
+            const rawEndpoints = point.values.map((value) => horizontal
+                ? { x: margin.left + chartWidth * valuePosition(value), y: axisPosition }
+                : { x: axisPosition, y: margin.top + chartHeight - chartHeight * valuePosition(value) });
+            const finiteEndpoints = rawEndpoints.filter((_, valueIndex) => Number.isFinite(point.values[valueIndex]));
+            const markersAreClose = finiteEndpoints.length > 1 && (
+                horizontal
+                    ? Math.abs(finiteEndpoints[0].x - finiteEndpoints[1].x) < dotRadius * 2 + 6
+                    : Math.abs(finiteEndpoints[0].y - finiteEndpoints[1].y) < dotRadius * 2 + 6
+            );
             point.values.forEach((value, valueIndex) => {
                 if (!Number.isFinite(value)) {
                     return;
                 }
+                const markerSeparation = markersAreClose ? dotRadius + 4 : 0;
+                const markerOffset = markersAreClose && valueIndex === 0 ? -markerSeparation : markerSeparation;
+                const rawEndpoint = rawEndpoints[valueIndex];
                 const endpoint = horizontal
-                    ? { x: margin.left + chartWidth * valuePosition(value), y: axisPosition }
-                    : { x: axisPosition, y: margin.top + chartHeight - chartHeight * valuePosition(value) };
+                    ? { x: rawEndpoint.x, y: rawEndpoint.y + markerOffset }
+                    : { x: rawEndpoint.x + markerOffset, y: rawEndpoint.y };
                 const color = valueIndex === 0 ? settings.planColor.value.value : settings.factColor.value.value;
                 const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
                 group.style.cursor = "pointer";
+                if (markersAreClose) {
+                    group.appendChild(this.createSvgLine(
+                        rawEndpoint.x,
+                        rawEndpoint.y,
+                        endpoint.x,
+                        endpoint.y,
+                        settings.stemColor.value.value,
+                        1
+                    ));
+                }
                 const marker = this.createMarker(endpoint.x, endpoint.y, dotRadius, color,
                     settings.markerOutlineColor.value.value, outlineWidth, String(settings.markerShape.value.value));
                 group.appendChild(marker);
