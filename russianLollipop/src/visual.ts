@@ -38,6 +38,15 @@ import DataView = powerbi.DataView;
 
 import { VisualFormattingSettingsModel } from "./settings";
 
+type LabelPlacement = {
+    x: number;
+    y: number;
+    text: string;
+    width: number;
+    height: number;
+    anchor: string;
+};
+
 export class Visual implements IVisual {
     private target: HTMLElement;
     private svg: SVGSVGElement;
@@ -122,6 +131,7 @@ export class Visual implements IVisual {
                 axisSettings.axisColor.value.value, 1);
         }
 
+        const placedLabels: LabelPlacement[] = [];
         points.forEach((point, index) => {
             const slot = (index + 0.5) / points.length;
             const axisPosition = horizontal
@@ -164,13 +174,23 @@ export class Visual implements IVisual {
                         labelPosition,
                         horizontal
                     );
+                    const labelText = this.formatValue(value);
+                    const resolvedLabel = this.resolveLabelCollision(
+                        labelCoordinates,
+                        labelText,
+                        labelFontSize,
+                        String(settings.labelPosition.value.value),
+                        horizontal,
+                        placedLabels
+                    );
+                    placedLabels.push(resolvedLabel);
                     group.appendChild(this.createText(
-                        labelCoordinates.x,
-                        labelCoordinates.y,
-                        this.formatValue(value),
+                        resolvedLabel.x,
+                        resolvedLabel.y,
+                        labelText,
                         settings.labelColor.value.value,
                         labelFontSize,
-                        labelCoordinates.anchor,
+                        resolvedLabel.anchor,
                         "value-label"
                     ));
                 }
@@ -262,6 +282,44 @@ export class Visual implements IVisual {
             };
         }
         return { x: x + radius + 5, y: y + fontSize * 0.35, anchor: "start" };
+    }
+
+    private resolveLabelCollision(base: { x: number; y: number; anchor: string }, text: string,
+        fontSize: number, position: string, horizontal: boolean, placedLabels: LabelPlacement[]): LabelPlacement {
+        const width = Math.max(fontSize * 1.5, text.length * fontSize * 0.58);
+        const height = fontSize * 1.25;
+        const step = height + 3;
+        const offsets = [0, -step, step, -step * 2, step * 2, -step * 3, step * 3];
+        const movesAlongScale = horizontal !== (position === "side");
+        for (const offset of offsets) {
+            const candidate: LabelPlacement = {
+                x: base.x + (movesAlongScale ? offset : 0),
+                y: base.y + (movesAlongScale ? 0 : offset),
+                text,
+                width,
+                height,
+                anchor: base.anchor
+            };
+            if (!placedLabels.some((label) => this.labelsOverlap(candidate, label))) {
+                return candidate;
+            }
+        }
+        return {
+            x: base.x + (movesAlongScale ? step : 0),
+            y: base.y + (movesAlongScale ? 0 : step),
+            text,
+            width,
+            height,
+            anchor: base.anchor
+        };
+    }
+
+    private labelsOverlap(first: LabelPlacement, second: LabelPlacement): boolean {
+        const firstLeft = first.anchor === "end" ? first.x - first.width : first.anchor === "middle" ? first.x - first.width / 2 : first.x;
+        const secondLeft = second.anchor === "end" ? second.x - second.width : second.anchor === "middle" ? second.x - second.width / 2 : second.x;
+        const horizontalOverlap = firstLeft < secondLeft + second.width && firstLeft + first.width > secondLeft;
+        const verticalOverlap = Math.abs(first.y - second.y) < Math.max(first.height, second.height);
+        return horizontalOverlap && verticalOverlap;
     }
 
     private createSvgLine(x1: number, y1: number, x2: number, y2: number, color: string, width: number): SVGLineElement {
