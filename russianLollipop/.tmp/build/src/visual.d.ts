@@ -15,6 +15,11 @@ export declare class Visual implements IVisual {
     private render;
     private createSelectionId;
     private appendLine;
+    private drawGrid;
+    private createMarker;
+    private getLabelCoordinates;
+    private resolveLabelCollision;
+    private labelsOverlap;
     private createSvgLine;
     private createText;
     private formatValue;
