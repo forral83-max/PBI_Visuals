@@ -7,8 +7,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "nexoraKPI74A92BB1DAE480BBC09C4B425BA7001.5.9.1.0.pbiviz"
-OUTPUT = ROOT / "nexoraKPI74A92BB1DAE480BBC09C4B425BA7001.5.9.2.0.pbiviz"
-RESOURCE = "resources/nexoraKPI74A92BB1DAE480BBC09C4B425BA7001.pbiviz.json"
+OUTPUT = ROOT / "nexoraKPI_patched.5.9.2.0.pbiviz"
+ORIGINAL_RESOURCE = "resources/nexoraKPI74A92BB1DAE480BBC09C4B425BA7001.pbiviz.json"
+PATCHED_GUID = "nexoraKPIPatched5F7C3A1E9D2648B7A0C4E6F1829D3A55"
+RESOURCE = f"resources/{PATCHED_GUID}.pbiviz.json"
 
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
@@ -69,7 +71,9 @@ def update_capabilities(p: dict) -> None:
     add_property(objects["flip"], "segmentPercentLabel", {"type": {"text": True}})
     add_property(objects["flip"], "percentChangeLabel", {"type": {"text": True}})
 
+    p["visual"]["guid"] = PATCHED_GUID
     p["visual"]["version"] = "5.9.2.0"
+    p["visual"]["displayName"] = "Nexora KPI (Patched)"
     p["visual"]["description"] = (
         "Nexora KPI — configurable KPI card with Russian and English labels, "
         "seven styles, target labels, sparklines, flip-card details and selection effects."
@@ -408,10 +412,13 @@ def russian_resources() -> dict:
 def main() -> None:
     with zipfile.ZipFile(SOURCE) as archive:
         package = json.loads(archive.read("package.json"))
-        visual = json.loads(archive.read(RESOURCE))
+        visual = json.loads(archive.read(ORIGINAL_RESOURCE))
 
     package["version"] = "5.9.2.0"
     package["visual"]["version"] = "5.9.2.0"
+    package["visual"]["guid"] = PATCHED_GUID
+    package["visual"]["displayName"] = "Nexora KPI (Patched)"
+    package["resources"][0]["file"] = RESOURCE
     update_capabilities(visual)
 
     js = visual["content"]["js"]
@@ -422,6 +429,7 @@ def main() -> None:
     js = replace_target(js)
     js = patch_flip(js)
     js = patch_locale_and_text(js)
+    js = js.replace("nexoraKPI74A92BB1DAE480BBC09C4B425BA7001", PATCHED_GUID)
     visual["content"]["js"] = js
     visual["content"]["css"] = append_css(visual["content"]["css"])
     visual["stringResources"] = {"en-US": visual["stringResources"]["en-US"], "ru-RU": russian_resources()}
