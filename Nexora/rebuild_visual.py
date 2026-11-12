@@ -8,9 +8,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "nexoraKPI74A92BB1DAE480BBC09C4B425BA7001.5.9.1.0.pbiviz"
-OUTPUT = ROOT / "nexoraKPI_patched.5.9.2.0.pbiviz"
+OUTPUT = ROOT / "nexoraKPI_5.9.3.0_patched.pbiviz"
 ORIGINAL_RESOURCE = "resources/nexoraKPI74A92BB1DAE480BBC09C4B425BA7001.pbiviz.json"
-PATCHED_GUID = "nexoraKPIPatched5F7C3A1E9D2648B7A0C4E6F1829D3A55"
+PATCHED_GUID = "nexoraKPI8C2D6F1A4B9E4370A5D1C8F3B6E2A904"
+VERSION = "5.9.3.0"
+DISPLAY_NAME = "Nexora KPI Enhanced 5.9.3"
 RESOURCE = f"resources/{PATCHED_GUID}.pbiviz.json"
 
 
@@ -82,8 +84,8 @@ def update_capabilities(p: dict) -> None:
     add_property(objects["flip"], "percentChangeLabel", {"type": {"text": True}})
 
     p["visual"]["guid"] = PATCHED_GUID
-    p["visual"]["version"] = "5.9.2.0"
-    p["visual"]["displayName"] = "Nexora KPI (Patched)"
+    p["visual"]["version"] = VERSION
+    p["visual"]["displayName"] = DISPLAY_NAME
     p["visual"].pop("supportUrl", None)
     p["visual"].pop("gitHubUrl", None)
     p["visual"]["description"] = (
@@ -430,7 +432,7 @@ def patch_locale_and_text(js: str) -> str:
 
 def append_css(css: str) -> str:
     return css + """
-/* Nexora KPI 5.9.2.0 fixes */
+/* Nexora KPI 5.9.3.0 fixes */
 .kpi-icon-inline-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .kpi-icon-inline-row .kpi-value { flex: 1; min-width: 0; }
 .kpi-gauge-content { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
@@ -488,10 +490,10 @@ def main() -> None:
         package = json.loads(archive.read("package.json"))
         visual = json.loads(archive.read(ORIGINAL_RESOURCE))
 
-    package["version"] = "5.9.2.0"
-    package["visual"]["version"] = "5.9.2.0"
+    package["version"] = VERSION
+    package["visual"]["version"] = VERSION
     package["visual"]["guid"] = PATCHED_GUID
-    package["visual"]["displayName"] = "Nexora KPI (Patched)"
+    package["visual"]["displayName"] = DISPLAY_NAME
     package["visual"].pop("supportUrl", None)
     package["visual"].pop("gitHubUrl", None)
     package["resources"][0]["file"] = RESOURCE
