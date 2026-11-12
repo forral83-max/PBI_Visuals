@@ -8,11 +8,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "nexoraKPI74A92BB1DAE480BBC09C4B425BA7001.5.9.1.0.pbiviz"
-OUTPUT = ROOT / "nexoraKPI_5.9.3.0_patched.pbiviz"
+OUTPUT = ROOT / "nexoraKPI_5.9.4.0_patched.pbiviz"
 ORIGINAL_RESOURCE = "resources/nexoraKPI74A92BB1DAE480BBC09C4B425BA7001.pbiviz.json"
-PATCHED_GUID = "nexoraKPI8C2D6F1A4B9E4370A5D1C8F3B6E2A904"
-VERSION = "5.9.3.0"
-DISPLAY_NAME = "Nexora KPI Enhanced 5.9.3"
+PATCHED_GUID = "nexoraKPI2E9A7C4D1F6B4830A8C5E2D7B9F10463"
+VERSION = "5.9.4.0"
+DISPLAY_NAME = "Nexora KPI Enhanced 5.9.4"
 RESOURCE = f"resources/{PATCHED_GUID}.pbiviz.json"
 
 
@@ -118,6 +118,12 @@ def patch_formatting_classes(js: str) -> str:
         't.gaugeShowPercent,t.gaugeThickness,t.gaugeTrackColor,t.accentBarWidth',
         't.gaugeShowPercent,t.gaugeThickness,t.gaugeTrackColor,t.gaugeDeltaPosition,t.accentBarWidth',
         "gauge delta format slice list",
+    )
+    js = replace_once(
+        js,
+        'name="gradient";displayName="Gradient";topLevelSlice=this.show;slices=[this.startColor,this.endColor,this.angle]',
+        'name="gradient";displayName="Gradient";slices=[this.show,this.startColor,this.endColor,this.angle]',
+        "persist gradient toggle as regular slice",
     )
     js = replace_once(
         js,
@@ -432,7 +438,7 @@ def patch_locale_and_text(js: str) -> str:
 
 def append_css(css: str) -> str:
     return css + """
-/* Nexora KPI 5.9.3.0 fixes */
+/* Nexora KPI 5.9.4.0 fixes */
 .kpi-icon-inline-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .kpi-icon-inline-row .kpi-value { flex: 1; min-width: 0; }
 .kpi-gauge-content { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
