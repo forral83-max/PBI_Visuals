@@ -8,11 +8,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "nexoraKPI74A92BB1DAE480BBC09C4B425BA7001.5.9.1.0.pbiviz"
-OUTPUT = ROOT / "nexoraKPI_5.9.4.0_patched.pbiviz"
+OUTPUT = ROOT / "nexoraKPI_5.9.5.0_patched.pbiviz"
 ORIGINAL_RESOURCE = "resources/nexoraKPI74A92BB1DAE480BBC09C4B425BA7001.pbiviz.json"
-PATCHED_GUID = "nexoraKPI2E9A7C4D1F6B4830A8C5E2D7B9F10463"
-VERSION = "5.9.4.0"
-DISPLAY_NAME = "Nexora KPI Enhanced 5.9.4"
+PATCHED_GUID = "nexoraKPI7B4E1D9A6C2F4380B5E7A1D3C9F62480"
+VERSION = "5.9.5.0"
+DISPLAY_NAME = "Nexora KPI Enhanced 5.9.5"
 RESOURCE = f"resources/{PATCHED_GUID}.pbiviz.json"
 
 
@@ -59,6 +59,9 @@ def update_capabilities(p: dict) -> None:
     add_role(c)
 
     objects = c["objects"]
+    gradient_object = objects.pop("gradient")
+    gradient_object["properties"]["enabled"] = gradient_object["properties"].pop("show")
+    objects["gradientBackground"] = gradient_object
     enum_type = lambda items: {"enumeration": [{"value": value, "displayName": label} for value, label in items]}
     fill_type = {"fill": {"solid": {"color": True}}}
 
@@ -121,9 +124,9 @@ def patch_formatting_classes(js: str) -> str:
     )
     js = replace_once(
         js,
-        'name="gradient";displayName="Gradient";topLevelSlice=this.show;slices=[this.startColor,this.endColor,this.angle]',
-        'name="gradient";displayName="Gradient";slices=[this.show,this.startColor,this.endColor,this.angle]',
-        "persist gradient toggle as regular slice",
+        'show=new i.z.jF({name:"show",displayName:"Gradient background",value:!1});startColor=new i.z.sk({name:"startColor",displayName:"Start color",value:{value:"#A07E3F"}});endColor=new i.z.sk({name:"endColor",displayName:"End color",value:{value:"#C9A961"}});angle=new i.z.iB({name:"angle",displayName:"Angle (degrees)",value:135});name="gradient";displayName="Gradient";topLevelSlice=this.show;slices=[this.startColor,this.endColor,this.angle]',
+        'enabled=new i.z.jF({name:"enabled",displayName:"Enable gradient background",value:!1});startColor=new i.z.sk({name:"startColor",displayName:"Start color",value:{value:"#A07E3F"}});endColor=new i.z.sk({name:"endColor",displayName:"End color",value:{value:"#C9A961"}});angle=new i.z.iB({name:"angle",displayName:"Angle (degrees)",value:135});name="gradientBackground";displayName="Gradient";slices=[this.enabled,this.startColor,this.endColor,this.angle]',
+        "persist gradient toggle with dedicated property",
     )
     js = replace_once(
         js,
@@ -281,10 +284,13 @@ def patch_rendering(js: str) -> str:
         'const d=this.formattingSettings.flipCard;',
         "preserve user selection gradient colors",
     )
+    if js.count("gradientCard.show.value") != 2:
+        raise RuntimeError(f"gradient runtime property: expected 2 matches, found {js.count('gradientCard.show.value')}")
+    js = js.replace("gradientCard.show.value", "gradientCard.enabled.value")
     js = replace_once(
         js,
-        'if(t.gradientCard.show.value&&!t.styleCard.transparentBackground.value){const e=t.gradientCard;i.style.setProperty("background-image","linear-gradient("+e.angle.value+"deg, "+e.startColor.value.value+", "+e.endColor.value.value+")","important"),i.style.setProperty("background-color","transparent","important"),i.classList.add("kpi-gradient-bg")}this.applyConditionalColor(i,e);',
-        'this.applyConditionalColor(i,e);if(t.gradientCard.show.value){const e=t.gradientCard;i.style.setProperty("background-image","linear-gradient("+e.angle.value+"deg, "+e.startColor.value.value+", "+e.endColor.value.value+")","important"),i.style.setProperty("background-color","transparent","important"),i.classList.add("kpi-gradient-bg")}else i.style.setProperty("background-image","none","important");',
+        'if(t.gradientCard.enabled.value&&!t.styleCard.transparentBackground.value){const e=t.gradientCard;i.style.setProperty("background-image","linear-gradient("+e.angle.value+"deg, "+e.startColor.value.value+", "+e.endColor.value.value+")","important"),i.style.setProperty("background-color","transparent","important"),i.classList.add("kpi-gradient-bg")}this.applyConditionalColor(i,e);',
+        'this.applyConditionalColor(i,e);if(t.gradientCard.enabled.value){const e=t.gradientCard;i.style.setProperty("background-image","linear-gradient("+e.angle.value+"deg, "+e.startColor.value.value+", "+e.endColor.value.value+")","important"),i.style.setProperty("background-color","transparent","important"),i.classList.add("kpi-gradient-bg")}else i.style.setProperty("background-image","none","important");',
         "gradient applied after conditional color",
     )
     js = replace_once(
@@ -438,7 +444,7 @@ def patch_locale_and_text(js: str) -> str:
 
 def append_css(css: str) -> str:
     return css + """
-/* Nexora KPI 5.9.4.0 fixes */
+/* Nexora KPI 5.9.5.0 fixes */
 .kpi-icon-inline-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .kpi-icon-inline-row .kpi-value { flex: 1; min-width: 0; }
 .kpi-gauge-content { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
