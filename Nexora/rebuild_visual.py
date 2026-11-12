@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import zipfile
 from pathlib import Path
 
@@ -22,21 +23,29 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
 
 def add_role(capabilities: dict) -> None:
     roles = capabilities["dataRoles"]
-    if not any(role["name"] == "note" for role in roles):
-        roles.append(
-            {
-                "displayName": "Back note value",
-                "name": "note",
-                "kind": "Measure",
-                "description": "Optional text measure shown on the flip-card back",
-            }
-        )
+    note_roles = [
+        ("note", "Back note value", "Optional text measure shown on the flip-card back"),
+        ("note2", "Back note value 2", "Optional second text measure shown on the flip-card back"),
+        ("note3", "Back note value 3", "Optional third text measure shown on the flip-card back"),
+    ]
+    for name, display_name, description in note_roles:
+        if not any(role["name"] == name for role in roles):
+            roles.append(
+                {
+                    "displayName": display_name,
+                    "name": name,
+                    "kind": "Measure",
+                    "description": description,
+                }
+            )
 
     condition = capabilities["dataViewMappings"][0]["conditions"][0]
-    condition.setdefault("note", {})["max"] = 1
+    for name, _, _ in note_roles:
+        condition.setdefault(name, {})["max"] = 1
     values = capabilities["dataViewMappings"][0]["categorical"]["values"]["select"]
-    if not any(item.get("bind", {}).get("to") == "note" for item in values):
-        values.append({"bind": {"to": "note"}})
+    for name, _, _ in note_roles:
+        if not any(item.get("bind", {}).get("to") == name for item in values):
+            values.append({"bind": {"to": name}})
 
 
 def add_property(group: dict, name: str, descriptor: dict) -> None:
@@ -56,6 +65,7 @@ def update_capabilities(p: dict) -> None:
         ("above", "Above gauge"),
         ("right", "Right of gauge"),
     ])})
+    add_property(objects["delta"], "fontSize", {"type": {"numeric": True}})
 
     add_property(objects["target"], "labelText", {"type": {"text": True}})
     add_property(objects["target"], "labelPosition", {"type": enum_type([
@@ -74,6 +84,8 @@ def update_capabilities(p: dict) -> None:
     p["visual"]["guid"] = PATCHED_GUID
     p["visual"]["version"] = "5.9.2.0"
     p["visual"]["displayName"] = "Nexora KPI (Patched)"
+    p["visual"].pop("supportUrl", None)
+    p["visual"].pop("gitHubUrl", None)
     p["visual"]["description"] = (
         "Nexora KPI — configurable KPI card with Russian and English labels, "
         "seven styles, target labels, sparklines, flip-card details and selection effects."
@@ -104,6 +116,12 @@ def patch_formatting_classes(js: str) -> str:
         't.gaugeShowPercent,t.gaugeThickness,t.gaugeTrackColor,t.accentBarWidth',
         't.gaugeShowPercent,t.gaugeThickness,t.gaugeTrackColor,t.gaugeDeltaPosition,t.accentBarWidth',
         "gauge delta format slice list",
+    )
+    js = replace_once(
+        js,
+        'invertColors=new i.z.jF({name:"invertColors",displayName:"Invert (lower is better)",value:!1});name="delta";displayName="Delta";slices=[this.show,this.asPercent,this.positiveColor,this.negativeColor,this.invertColors]}class c',
+        'invertColors=new i.z.jF({name:"invertColors",displayName:"Invert (lower is better)",value:!1});fontSize=new i.z.iB({name:"fontSize",displayName:"Font size",value:12});name="delta";displayName="Delta";slices=[this.show,this.asPercent,this.positiveColor,this.negativeColor,this.invertColors,this.fontSize]}class c',
+        "delta font size setting",
     )
 
     js = replace_once(
@@ -156,25 +174,25 @@ def patch_data_extraction(js: str) -> str:
     js = replace_once(
         js,
         'let a=0,i=null,l=!1,s="",n="",o="",r=null,d=null,c=null,u=null,p="";',
-        'let a=0,i=null,l=!1,s="",n="",o="",r=null,d=null,c=null,u=null,p="",L=null,q=null;',
+        'let a=0,i=null,l=!1,s="",n="",o="",r=null,d=null,c=null,u=null,p="",L=null,q=null,Q=null,Z=null;',
         "extract data state",
     )
     js = replace_once(
         js,
         'i.target&&!u&&(u=a,p=a.source.displayName||"Target")}',
-        'i.target&&!u?(u=a,p=a.source.displayName||"Target"):i.label&&!L?(L=a):i.note&&!q&&(q=a)}',
+        'i.target&&!u?(u=a,p=a.source.displayName||"Target"):i.label&&!L?(L=a):i.note&&!q?q=a:i.note2&&!Q?Q=a:i.note3&&!Z&&(Z=a)}',
         "label and note roles",
     )
     js = replace_once(
         js,
         'null===N&&(N=m(e),0===N&&0===e.length&&(N=null))}return null!==h',
-        'null===N&&(N=m(e),0===N&&0===e.length&&(N=null))}let R="";if(q){const e=null!=q.highlights?q.highlights:q.values||[];for(const t of e)if(null!=t){R=String(t);break}}if(L&&L.values&&L.values.length>0){const e=null!=L.highlights?L.highlights:L.values||[];for(const t of e)if(null!=t){s=String(t);break}}return null!==h',
+        'null===N&&(N=m(e),0===N&&0===e.length&&(N=null))}const E=e=>{const t=null!=e.highlights?e.highlights:e.values||[];for(const e of t)if(null!=e)return String(e);return""};let R=q?E(q):"",F=Q?E(Q):"",I=Z?E(Z):"";if(L&&L.values&&L.values.length>0){const e=null!=L.highlights?L.highlights:L.values||[];for(const t of e)if(null!=t){s=String(t);break}}return null!==h',
         "text measure extraction",
     )
     js = replace_once(
         js,
         'target:N,targetName:p}',
-        'target:N,targetName:p,noteText:R}',
+        'target:N,targetName:p,noteText:R,noteText2:F,noteText3:I}',
         "note data returned",
     )
     return js
@@ -227,6 +245,12 @@ def patch_rendering(js: str) -> str:
     )
     js = replace_once(
         js,
+        'return a.textContent=n,a.style.color=s,a.style.background=this.hexAlpha(s,.12),a}',
+        'return a.textContent=n,a.style.color=s,a.style.fontSize=Math.max(8,t.fontSize&&t.fontSize.value||12)+"px",a.style.background=this.hexAlpha(s,.12),a}',
+        "delta font size application",
+    )
+    js = replace_once(
+        js,
         't.style.background=`linear-gradient(${e}deg, ${i} 0%, ${l} 33%, ${s} 66%, ${n} 100%)`',
         't.style.setProperty("background",`linear-gradient(${e}deg, ${i} 0%, ${l} 33%, ${s} 66%, ${n} 100%)`,"important")',
         "selection gradient",
@@ -242,6 +266,18 @@ def patch_rendering(js: str) -> str:
         'else t.style.background=t._origBg||"",t.style.removeProperty("--nx-select-text")',
         'else t.style.removeProperty("background"),t._origBg&&t.style.setProperty("background",t._origBg),t.style.removeProperty("--nx-select-text")',
         "selection restore",
+    )
+    js = replace_once(
+        js,
+        'const r=this.formattingSettings.selectionCard;r&&(l&&(r.gradColor1.value={value:l}),s&&(r.gradColor2.value={value:s}),n&&(r.gradColor3.value={value:n}),o&&(r.gradColor4.value={value:o}),l&&(r.rippleColor.value={value:l}));const d=this.formattingSettings.flipCard;',
+        'const d=this.formattingSettings.flipCard;',
+        "preserve user selection gradient colors",
+    )
+    js = replace_once(
+        js,
+        'if(t.gradientCard.show.value&&!t.styleCard.transparentBackground.value){const e=t.gradientCard;i.style.setProperty("background-image","linear-gradient("+e.angle.value+"deg, "+e.startColor.value.value+", "+e.endColor.value.value+")","important"),i.style.setProperty("background-color","transparent","important"),i.classList.add("kpi-gradient-bg")}this.applyConditionalColor(i,e);',
+        'this.applyConditionalColor(i,e);if(t.gradientCard.show.value){const e=t.gradientCard;i.style.setProperty("background-image","linear-gradient("+e.angle.value+"deg, "+e.startColor.value.value+", "+e.endColor.value.value+")","important"),i.style.setProperty("background-color","transparent","important"),i.classList.add("kpi-gradient-bg")}else i.style.setProperty("background-image","none","important");',
+        "gradient applied after conditional color",
     )
     js = replace_once(
         js,
@@ -297,9 +333,46 @@ def patch_flip(js: str) -> str:
     js = replace_once(
         js,
         'const k=(a.flipCard.backText.value||"").trim();if(k){const e=this.el("div","kpi-back-text",k)',
-        'const k=(a.flipCard.backText.value||t.noteText||"").trim();if(k){const e=this.el("div","kpi-back-text",k)',
-        "text measure back note",
+        'const k=(a.flipCard.backText.value||[t.noteText,t.noteText2,t.noteText3].filter(Boolean).join("\\n")).trim();if(k){const e=this.el("div","kpi-back-text",k)',
+        "multiple text measures back note",
     )
+    return js
+
+
+def remove_external_links(js: str) -> str:
+    js, count = re.subn(
+        r'const v=this\.el\("div","nx-landing-cta".*?l\.appendChild\(v\);',
+        "",
+        js,
+        count=1,
+    )
+    if count != 1:
+        raise RuntimeError(f"landing CTA removal: expected 1 match, found {count}")
+
+    js, count = re.subn(
+        r'const C=this\.el\("div","nx-landing-links"\).*?l\.appendChild\(C\),t\.appendChild\(l\);',
+        "t.appendChild(l);",
+        js,
+        count=1,
+    )
+    if count != 1:
+        raise RuntimeError(f"landing links removal: expected 1 match, found {count}")
+
+    start = js.find("makeLandingLink(e,t,a){")
+    if start < 0:
+        raise RuntimeError("landing link method not found")
+    end = js.find("makeLabel(e){", start)
+    if end < 0:
+        raise RuntimeError("makeLabel after landing link method not found")
+    js = js[:start] + 'makeLandingLink(e,t,a){return this.el("div","nx-landing-link",t)}' + js[end:]
+
+    for url in (
+        "https://nexoraanalysis.com",
+        "https://www.linkedin.com",
+        "mailto:contact@nexoraanalysis.com",
+    ):
+        if url in js:
+            raise RuntimeError(f"external link remains in JavaScript: {url}")
     return js
 
 
@@ -369,6 +442,7 @@ def append_css(css: str) -> str:
 .kpi-target-goal { color: inherit; opacity: .75; }
 .kpi-target-track { width: 100%; }
 .kpi-target-label + .kpi-target-row { margin-top: 1px; }
+.kpi-back-text { white-space: pre-wrap; }
 """
 
 
@@ -418,6 +492,8 @@ def main() -> None:
     package["visual"]["version"] = "5.9.2.0"
     package["visual"]["guid"] = PATCHED_GUID
     package["visual"]["displayName"] = "Nexora KPI (Patched)"
+    package["visual"].pop("supportUrl", None)
+    package["visual"].pop("gitHubUrl", None)
     package["resources"][0]["file"] = RESOURCE
     update_capabilities(visual)
 
@@ -429,6 +505,7 @@ def main() -> None:
     js = replace_target(js)
     js = patch_flip(js)
     js = patch_locale_and_text(js)
+    js = remove_external_links(js)
     js = js.replace("nexoraKPI74A92BB1DAE480BBC09C4B425BA7001", PATCHED_GUID)
     visual["content"]["js"] = js
     visual["content"]["css"] = append_css(visual["content"]["css"])
