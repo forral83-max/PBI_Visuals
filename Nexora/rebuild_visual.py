@@ -8,11 +8,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "nexoraKPI74A92BB1DAE480BBC09C4B425BA7001.5.9.1.0.pbiviz"
-OUTPUT = ROOT / "nexoraKPI_5.9.5.0_patched.pbiviz"
+OUTPUT = ROOT / "nexoraKPI_5.9.6.0_patched.pbiviz"
 ORIGINAL_RESOURCE = "resources/nexoraKPI74A92BB1DAE480BBC09C4B425BA7001.pbiviz.json"
 PATCHED_GUID = "nexoraKPI7B4E1D9A6C2F4380B5E7A1D3C9F62480"
-VERSION = "5.9.5.0"
-DISPLAY_NAME = "Nexora KPI Enhanced 5.9.5"
+VERSION = "5.9.6.0"
+DISPLAY_NAME = "Nexora KPI Enhanced 5.9.6"
 RESOURCE = f"resources/{PATCHED_GUID}.pbiviz.json"
 
 
@@ -25,12 +25,13 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
 
 def add_role(capabilities: dict) -> None:
     roles = capabilities["dataRoles"]
-    note_roles = [
+    context_text_roles = [
+        ("targetLabel", "Target label (measure)", "Optional text measure for the target label, evaluated in the current filter context"),
         ("note", "Back note value", "Optional text measure shown on the flip-card back"),
         ("note2", "Back note value 2", "Optional second text measure shown on the flip-card back"),
         ("note3", "Back note value 3", "Optional third text measure shown on the flip-card back"),
     ]
-    for name, display_name, description in note_roles:
+    for name, display_name, description in context_text_roles:
         if not any(role["name"] == name for role in roles):
             roles.append(
                 {
@@ -42,10 +43,10 @@ def add_role(capabilities: dict) -> None:
             )
 
     condition = capabilities["dataViewMappings"][0]["conditions"][0]
-    for name, _, _ in note_roles:
+    for name, _, _ in context_text_roles:
         condition.setdefault(name, {})["max"] = 1
     values = capabilities["dataViewMappings"][0]["categorical"]["values"]["select"]
-    for name, _, _ in note_roles:
+    for name, _, _ in context_text_roles:
         if not any(item.get("bind", {}).get("to") == name for item in values):
             values.append({"bind": {"to": name}})
 
@@ -185,25 +186,25 @@ def patch_data_extraction(js: str) -> str:
     js = replace_once(
         js,
         'let a=0,i=null,l=!1,s="",n="",o="",r=null,d=null,c=null,u=null,p="";',
-        'let a=0,i=null,l=!1,s="",n="",o="",r=null,d=null,c=null,u=null,p="",L=null,q=null,Q=null,Z=null;',
+        'let a=0,i=null,l=!1,s="",n="",o="",r=null,d=null,c=null,u=null,p="",L=null,T=null,q=null,Q=null,Z=null;',
         "extract data state",
     )
     js = replace_once(
         js,
         'i.target&&!u&&(u=a,p=a.source.displayName||"Target")}',
-        'i.target&&!u?(u=a,p=a.source.displayName||"Target"):i.label&&!L?(L=a):i.note&&!q?q=a:i.note2&&!Q?Q=a:i.note3&&!Z&&(Z=a)}',
+        'i.target&&!u?(u=a,p=a.source.displayName||"Target"):i.label&&!L?(L=a):i.targetLabel&&!T?(T=a):i.note&&!q?q=a:i.note2&&!Q?Q=a:i.note3&&!Z&&(Z=a)}',
         "label and note roles",
     )
     js = replace_once(
         js,
         'null===N&&(N=m(e),0===N&&0===e.length&&(N=null))}return null!==h',
-        'null===N&&(N=m(e),0===N&&0===e.length&&(N=null))}const E=e=>{const t=null!=e.highlights?e.highlights:e.values||[];for(const e of t)if(null!=e)return String(e);return""};let R=q?E(q):"",F=Q?E(Q):"",I=Z?E(Z):"";if(L&&L.values&&L.values.length>0){const e=null!=L.highlights?L.highlights:L.values||[];for(const t of e)if(null!=t){s=String(t);break}}return null!==h',
+        'null===N&&(N=m(e),0===N&&0===e.length&&(N=null))}const E=e=>{const t=null!=e.highlights?e.highlights:e.values||[];for(const e of t)if(null!=e)return String(e);return""};let V=T?E(T):"",R=q?E(q):"",F=Q?E(Q):"",I=Z?E(Z):"";if(L&&L.values&&L.values.length>0){const e=null!=L.highlights?L.highlights:L.values||[];for(const t of e)if(null!=t){s=String(t);break}}return null!==h',
         "text measure extraction",
     )
     js = replace_once(
         js,
         'target:N,targetName:p}',
-        'target:N,targetName:p,noteText:R,noteText2:F,noteText3:I}',
+        'target:N,targetName:p,targetLabelText:V,noteText:R,noteText2:F,noteText3:I}',
         "note data returned",
     )
     return js
@@ -316,6 +317,10 @@ def replace_target(js: str) -> str:
     end = js.index("formatValue(e){", start)
     new = '''appendTargetIndicator(e,t){const a=this.formattingSettings.targetCard;if(!a||!a.show.value||null===t.target||0===t.target)return;const i=t.value/t.target*100,l=a.style.value.value,s=a.behindAt.value;let n;n=i>=a.onTrackAt.value?a.achievedColor.value.value:i<s?a.behindColor.value.value:a.inProgressColor.value.value;const o=this.el("div","kpi-target"),r=(a.labelText&&a.labelText.value||t.targetName||"Target").trim()||"Target",d=a.labelPosition&&a.labelPosition.value?a.labelPosition.value.value:"top",c=this.el("span","kpi-target-label",r);c.style.fontSize=Math.max(8,a.labelFontSize&&a.labelFontSize.value||10)+"px",c.style.color=a.labelColor&&a.labelColor.value?a.labelColor.value.value:"#8A8A95";"top"===d&&a.showLabel.value&&o.appendChild(c);if(a.showLabel.value||"percent"===l||"both"===l){const e=this.el("div","kpi-target-row");"inline"===d&&a.showLabel.value&&e.appendChild(c),"percent"!==l&&"both"!==l||(()=>{const e=this.el("span","kpi-target-pct",i.toFixed(0)+"%");e.style.color=n,e.style.fontWeight="700",e.appendChild(document.createTextNode("")),e&&e;return e})(),"percent"!==l&&"both"!==l||e.appendChild((()=>{const e=this.el("span","kpi-target-pct",i.toFixed(0)+"%");return e.style.color=n,e.style.fontWeight="700",e})()),a.showLabel.value&&e.appendChild(this.el("span","kpi-target-goal","/ "+this.formatValue(t.target))),o.appendChild(e)}if("bar"===l||"both"===l){const e=this.el("div","kpi-target-track");e.style.background=a.trackColor.value.value;const t=this.el("div","kpi-target-fill"),l=Math.max(0,Math.min(100,i));t.style.width=l+"%",t.style.background=n,i>100&&e.classList.add("kpi-target-over"),e.appendChild(t),o.appendChild(e)}"bottom"===d&&a.showLabel.value&&o.appendChild(c),e.appendChild(o)}
 '''
+    new = new.replace(
+        'r=(a.labelText&&a.labelText.value||t.targetName||"Target")',
+        'r=(t.targetLabelText||a.labelText&&a.labelText.value||t.targetName||"Target")',
+    )
     return js[:start] + new + js[end:]
 
 
@@ -444,7 +449,7 @@ def patch_locale_and_text(js: str) -> str:
 
 def append_css(css: str) -> str:
     return css + """
-/* Nexora KPI 5.9.5.0 fixes */
+/* Nexora KPI 5.9.6.0 fixes */
 .kpi-icon-inline-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .kpi-icon-inline-row .kpi-value { flex: 1; min-width: 0; }
 .kpi-gauge-content { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
