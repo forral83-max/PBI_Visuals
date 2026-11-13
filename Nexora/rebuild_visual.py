@@ -8,11 +8,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "nexoraKPI74A92BB1DAE480BBC09C4B425BA7001.5.9.1.0.pbiviz"
-OUTPUT = ROOT / "nexoraKPI_5.9.6.0_patched.pbiviz"
+OUTPUT = ROOT / "nexoraKPI_5.9.7.0_patched.pbiviz"
 ORIGINAL_RESOURCE = "resources/nexoraKPI74A92BB1DAE480BBC09C4B425BA7001.pbiviz.json"
 PATCHED_GUID = "nexoraKPI7B4E1D9A6C2F4380B5E7A1D3C9F62480"
-VERSION = "5.9.6.0"
-DISPLAY_NAME = "Nexora KPI Enhanced 5.9.6"
+VERSION = "5.9.7.0"
+DISPLAY_NAME = "Nexora KPI Enhanced 5.9.7"
 RESOURCE = f"resources/{PATCHED_GUID}.pbiviz.json"
 
 
@@ -197,9 +197,9 @@ def patch_data_extraction(js: str) -> str:
     )
     js = replace_once(
         js,
-        'null===N&&(N=m(e),0===N&&0===e.length&&(N=null))}return null!==h',
-        'null===N&&(N=m(e),0===N&&0===e.length&&(N=null))}const E=e=>{const t=null!=e.highlights?e.highlights:e.values||[];for(const e of t)if(null!=e)return String(e);return""};let V=T?E(T):"",R=q?E(q):"",F=Q?E(Q):"",I=Z?E(Z):"";if(L&&L.values&&L.values.length>0){const e=null!=L.highlights?L.highlights:L.values||[];for(const t of e)if(null!=t){s=String(t);break}}return null!==h',
-        "text measure extraction",
+        'let N=null;if(u){const e=u.values||[];for(let t=0;t<e.length;t++){const a=e[t];if(null!=a&&!isNaN(Number(a))){N=Number(a);break}}null===N&&(N=m(e),0===N&&0===e.length&&(N=null))}return null!==h',
+        'let N=null;if(u){const t=u.values||[],e=u.highlights&&u.highlights.length===t.length?u.highlights:t;for(let t=0;t<e.length;t++){const a=e[t];if(null!=a&&!isNaN(Number(a))){N=Number(a);break}}null===N&&(N=m(e),0===N&&0===e.length&&(N=null))}const E=e=>{const t=null!=e.highlights?e.highlights:e.values||[];for(const e of t)if(null!=e)return String(e);return""};let V=T?E(T):"",R=q?E(q):"",F=Q?E(Q):"",I=Z?E(Z):"";if(L&&L.values&&L.values.length>0){const e=null!=L.highlights?L.highlights:L.values||[];for(const t of e)if(null!=t){s=String(t);break}}return null!==h',
+        "target highlight context and text measure extraction",
     )
     js = replace_once(
         js,
@@ -449,7 +449,7 @@ def patch_locale_and_text(js: str) -> str:
 
 def append_css(css: str) -> str:
     return css + """
-/* Nexora KPI 5.9.6.0 fixes */
+/* Nexora KPI 5.9.7.0 fixes */
 .kpi-icon-inline-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .kpi-icon-inline-row .kpi-value { flex: 1; min-width: 0; }
 .kpi-gauge-content { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
