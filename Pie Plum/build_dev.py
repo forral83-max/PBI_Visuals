@@ -17,9 +17,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "Pie Plume.pbiviz"
-OUTPUT = ROOT / "Pie Plume_dev.pbiviz"
+OUTPUT = ROOT / "Pie Plume_1.0.0.2_dev.pbiviz"
 RESOURCE = "resources/plumePieChartA98296CC7934459199F53486CD90BFCD.pbiviz.json"
-DEV_VERSION = "1.0.0.1"
+DEV_VERSION = "1.0.0.2"
 
 
 def main() -> None:
@@ -43,7 +43,19 @@ def main() -> None:
             "watermark(e){return DEV_LICENSE_MODE?!1:e&&!this.state.licensed}",
             1,
         )
+        footnote_start = "renderFootNote(e){"
+        footnote_end = "tip("
+        start = javascript.find(footnote_start)
+        end = javascript.find(footnote_end, start)
+        if start < 0 or end < 0 or javascript.find(footnote_start, start + 1) >= 0:
+            raise RuntimeError("watermark footer block was not found exactly once")
+        javascript = (
+            javascript[:start]
+            + 'renderFootNote(e){(0,l.HC)(this.footerEl);this.footerEl.style.display="none";(0,l.HC)(this.tilesEl);this.tilesEl.style.display="none"}'
+            + javascript[end:]
+        )
         resource["content"]["js"] = javascript
+        resource["content"]["css"] += ".pl-watermark,.pl-wm-tiles,.pl-wm-hint,.pl-wm-sep{display:none!important;}"
         resource["visual"]["version"] = DEV_VERSION
         patched_resource = json.dumps(
             resource,
