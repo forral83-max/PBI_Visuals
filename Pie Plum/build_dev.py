@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+"""Build a local Pie Plume artifact with the watermark disabled.
+
+The published ``Pie Plume.pbiviz`` is never modified.  This script creates a
+separate ``Pie Plume_dev.pbiviz`` from it and applies one explicit, dev-only
+patch to the embedded license helper.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import tempfile
+import zipfile
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent
+SOURCE = ROOT / "Pie Plume.pbiviz"
+OUTPUT = ROOT / "Pie Plume_dev.pbiviz"
+RESOURCE = "resources/plumePieChartA98296CC7934459199F53486CD90BFCD.pbiviz.json"
+
+
+def main() -> None:
+    with zipfile.ZipFile(SOURCE, "r") as source_zip:
+        resource = json.loads(source_zip.read(RESOURCE))
+        javascript = resource["content"]["js"]
+
+        class_marker = "class n{visualId;state="
+        watermark = "watermark(e){return e&&!this.state.licensed}"
+        if javascript.count(class_marker) != 1:
+            raise RuntimeError("license helper marker was not found exactly once")
+        if javascript.count(watermark) != 1:
+            raise RuntimeError("watermark helper was not found exactly once")
+
+        javascript = javascript.replace(
+            class_marker,
+            "const DEV_LICENSE_MODE=!0;" + class_marker,
+            1,
+        ).replace(
+            watermark,
+            "watermark(e){return DEV_LICENSE_MODE?!1:e&&!this.state.licensed}",
+            1,
+        )
+        resource["content"]["js"] = javascript
+        patched_resource = json.dumps(
+            resource,
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
+
+        output_fd, output_name = tempfile.mkstemp(
+            prefix="Pie Plume_dev.",
+            suffix=".pbiviz",
+            dir=ROOT,
+        )
+        os.close(output_fd)
+        try:
+            with zipfile.ZipFile(output_name, "w") as output_zip:
+                for item in source_zip.infolist():
+                    data = patched_resource if item.filename == RESOURCE else source_zip.read(item)
+                    output_zip.writestr(item, data)
+            os.replace(output_name, OUTPUT)
+        finally:
+            if os.path.exists(output_name):
+                os.unlink(output_name)
+
+    print(f"wrote {OUTPUT}")
+
+
+if __name__ == "__main__":
+    main()
