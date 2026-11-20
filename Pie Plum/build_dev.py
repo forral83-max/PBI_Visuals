@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "Pie Plume.pbiviz"
 OUTPUT = ROOT / "Pie Plume_dev.pbiviz"
 RESOURCE = "resources/plumePieChartA98296CC7934459199F53486CD90BFCD.pbiviz.json"
+DEV_VERSION = "1.0.0.1"
 
 
 def main() -> None:
@@ -43,8 +44,18 @@ def main() -> None:
             1,
         )
         resource["content"]["js"] = javascript
+        resource["visual"]["version"] = DEV_VERSION
         patched_resource = json.dumps(
             resource,
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
+
+        package = json.loads(source_zip.read("package.json"))
+        package["version"] = DEV_VERSION
+        package["visual"]["version"] = DEV_VERSION
+        patched_package = json.dumps(
+            package,
             ensure_ascii=False,
             separators=(",", ":"),
         ).encode("utf-8")
@@ -58,7 +69,12 @@ def main() -> None:
         try:
             with zipfile.ZipFile(output_name, "w") as output_zip:
                 for item in source_zip.infolist():
-                    data = patched_resource if item.filename == RESOURCE else source_zip.read(item)
+                    if item.filename == RESOURCE:
+                        data = patched_resource
+                    elif item.filename == "package.json":
+                        data = patched_package
+                    else:
+                        data = source_zip.read(item)
                     output_zip.writestr(item, data)
             os.replace(output_name, OUTPUT)
         finally:
